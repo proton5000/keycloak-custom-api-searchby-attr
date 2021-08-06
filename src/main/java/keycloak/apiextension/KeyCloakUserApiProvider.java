@@ -1,27 +1,23 @@
 package keycloak.apiextension;
 
+import keycloak.apiextension.services.CustomSmsService;
+import keycloak.apiextension.services.SmsService;
+import org.apache.http.HttpStatus;
 import org.jboss.resteasy.annotations.cache.NoCache;
 import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.UserModel;
 import org.keycloak.services.resource.RealmResourceProvider;
 import org.keycloak.utils.MediaType;
 
-import keycloak.apiextension.mappers.UserMapper;
-import keycloak.apiextension.models.UserDto;
-
 import javax.ws.rs.*;
-import java.util.List;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
+import java.io.IOException;
 
 public class KeyCloakUserApiProvider implements RealmResourceProvider {
     private final KeycloakSession session;
-    private final String defaultAttr = "merchent_id";
-    private final UserMapper userMapper;
-    
+    private final SmsService smsService;
+
     public KeyCloakUserApiProvider(KeycloakSession session) {
         this.session = session;
-        this.userMapper = new UserMapper();
+        this.smsService = new CustomSmsService();
     }
 
     public void close() {
@@ -32,13 +28,12 @@ public class KeyCloakUserApiProvider implements RealmResourceProvider {
     }
 
     @GET
-    @Path("users/search-by-attr")
+    @Path("send-by-phone")
     @NoCache
     @Produces({ MediaType.APPLICATION_JSON })
     @Encoded
-    public List<UserDto> searchUsersByAttribute(@DefaultValue(defaultAttr) @QueryParam("attr") String attr,
-            @QueryParam("value") String value) {
-        return session.users().searchForUserByUserAttribute(attr, value, session.getContext().getRealm())
-                .stream().map(e -> userMapper.mapToUserDto(e)).collect(Collectors.toList());
+    public int searchUsersByAttribute(@QueryParam("phone") String phone) throws IOException {
+        smsService.send(phone, "The otp code was send to number: " + phone);
+        return HttpStatus.SC_OK;
     }
 }
